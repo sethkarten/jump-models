@@ -59,6 +59,7 @@ def savefig_plt(filepath, close=False):
         Whether to close the figure after saving.
     """
     check_dir_exist(filepath)
+    print(filepath)
     plt.savefig(filepath)
     if close: plt.close()
     return 
@@ -275,7 +276,9 @@ def plot_regimes_and_cumret(regimes: PD_TYPE,
                             colors_regimes: Optional[list] = ['g', 'r'], 
                             labels_regimes: Optional[list] = ['Bull', 'Bear'],
                             ylabel_ret="Cumulative Returns",
-                            legend_loc="upper left"
+                            legend_loc="upper left",
+                            last_N_days: bool = False,
+                            N: int = 60,
                             ) -> tuple[plt.Axes, plt.Axes]:
     """
     Plot cumulative returns alongside regime identification in a single figure.
@@ -315,19 +318,33 @@ def plot_regimes_and_cumret(regimes: PD_TYPE,
     legend_loc : str, optional
         The location of the legend.
 
+    last_60_days : bool, optional (default=False)
+        If True, only plot the last 60 days of data.
+
     Returns
     -------
     tuple
         The axes objects for cumulative returns and regimes.
     """
+    # Filter data for last 60 days if specified
+    if last_N_days:
+        end_date = pd.to_datetime(end_date) if end_date else pd.to_datetime(ret_df.index[-1])
+        start_date = end_date - pd.Timedelta(days=N)
+        regimes = filter_date_range(regimes, start_date, end_date)
+        ret_df = filter_date_range(ret_df, start_date, end_date)
+
     # plot cumret
     ax = plot_cumret(ret_df, start_date=start_date, end_date=end_date, ax=ax, ylabel_ret=ylabel_ret)
+    
     # plot regimes
     ax2 = ax.twinx()
     ax2.set(ylabel="Regime")
     plot_regimes(regimes, n_c, start_date=start_date, end_date=end_date, ax=ax2, colors_regimes=colors_regimes, labels_regimes=labels_regimes)
-    # merge legneds
+    
+    # merge legends
     lines, labels = ax.get_legend_handles_labels()
     lines2, labels2 = ax2.get_legend_handles_labels()
     legend = ax2.legend(lines + lines2, labels + labels2, loc=legend_loc)
+    
     return (ax, ax2)
+
